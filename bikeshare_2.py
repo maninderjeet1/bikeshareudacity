@@ -2,6 +2,7 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from prettytable import PrettyTable
 
 CITY_DATA = { 'chicago': 'chicago.csv',
               'new york city': 'new_york_city.csv',
@@ -26,7 +27,6 @@ def get_filters():
             break
         else:
             print('Please enter valid city name.')
-
     while True:
         # get user input for month (all, january, february, ... , june)
         month = input('\nFilter by which month? (January, February, ... , June) or (Press Enter to skip)?\n')
@@ -44,7 +44,6 @@ def get_filters():
     print('#'*60)
     return city.lower(), month.lower(), day.lower()
 
-
 def load_data(city, month, day):
     """
     Loads data for the specified city and filters by month and day if applicable.
@@ -56,26 +55,20 @@ def load_data(city, month, day):
     Returns:
         df - pandas DataFrame containing city data filtered by month and day
     """
-
     # load data file into a dataframe
     df = pd.read_csv(CITY_DATA.get(city))
-
     # convert the Start Time column to datetime
     df['Start Time'] = pd.to_datetime(df['Start Time'])
-
     # extract month and day of week from Start Time to create new columns
     df['month'] = df['Start Time'].dt.month
     df['day_of_week'] = df['Start Time'].dt.dayofweek
     df['hour'] = df['Start Time'].dt.hour
-
-
     # filter by month if applicable
     if month.strip() != '':
         # use the index of the months list to get the corresponding int
         month = VALID_MONTHS.index(month)
         # filter by month to create the new dataframe
         df = df.loc[df['month'] == month]
-
     # filter by day of week if applicable
     if day.strip() != '':
         # filter by day of week to create the new dataframe
@@ -84,8 +77,7 @@ def load_data(city, month, day):
     return df
 
 def time_stats(df,city, month, day):
-    """Displays statistics on the most frequent times of travel."""
-
+    """ Displays statistics on the most frequent times of travel. """
     print('\nCalculating The Most Frequent Times of Travel For City({})...'.format(city))
     start_time = time.time()
     # display the most common month
@@ -99,53 +91,39 @@ def time_stats(df,city, month, day):
     print("\nThis took %s seconds." % (time.time() - start_time))
     print('#'*60)
 
-
 def station_stats(df):
     """Displays statistics on the most popular stations and trip."""
-
     print('Calculating The Most Popular Stations and Trip...')
     start_time = time.time()
-
     # display most commonly used start station
     print('Top start station: ', df['Start Station'].mode()[0])
-
     # display most commonly used end station
     print('Top end station: ', df['End Station'].mode()[0])
-
     # display most frequent combination of start station and end station trip
     groupby_stations = df.groupby(['Start Station','End Station'])
     start_end_stations = groupby_stations.size().idxmax()
-    #df[['Start Station','End Station']].mode().loc[0]
-    #print(groupby_stations.size(),' Count: ',groupby_stations.size().max())
     print('\nMost famous Origin and Destination')
     print('Origin: ',start_end_stations[0])
     print('Destination: ',start_end_stations[1])
     print("\nThis took %s seconds." % (time.time() - start_time))
     print('#'*60)
 
-
 def trip_duration_stats(df):
-    """Displays statistics on the total and average trip duration."""
-
+    """ Displays statistics on the total and average trip duration. """
     print('Calculating Trip Duration...')
     start_time = time.time()
-
     # display total travel time
     travel_time = df['Trip Duration']
     print('Total Travel Time: ',travel_time.sum())
-
     # display mean travel time
     print('Mean Travel Time: ', travel_time.mean())
-
     print("\nThis took %s seconds." % (time.time() - start_time))
     print('#'*60)
 
-
 def user_stats(df,city):
-    """Displays statistics on bikeshare users."""
+    """ Displays statistics on bikeshare users. """
     print('Calculating User Stats...')
     start_time = time.time()
-
     # Display counts of user types
     print('User types and counts')
     for key,val in df['User Type'].value_counts().items():
@@ -164,19 +142,17 @@ def user_stats(df,city):
         most_recent = int(df['Birth Year'].max())
         most_common = int(df['Birth Year'].value_counts().idxmax())
         most_common_count = int(df['Birth Year'].value_counts().max())
-
         print('Following are the earliest, most recent, and most common year of birth')
         print('Earliest Birth Year:', earliest)
         print('Most Recent Birth Year:', most_recent)
         print('Most Common Birth Year:', most_common, 'Count: ', most_common_count)
     except KeyError:
         print('OOPs Birth Year data not available for this city')
-
     print("\nThis took %s seconds." % (time.time() - start_time))
     print('#'*60)
 
 def print_user_interests(city,month,day):
-    """Display the Filters choosen by the user"""
+    """ Display the Filters choosen by the user """
     print('It looks you are interested in following data.')
     print('Filter by City -> ',city)
     if month != '':
@@ -185,7 +161,9 @@ def print_user_interests(city,month,day):
         print('Filter by Day->', day)
     print('Below data will be based on selected options....')
     print('#'*60)
+
 def plot_riders_data(df):
+    """ Plots the rider growth per month """
     print('Printing Riders growth per month')
     months = []
     riders = []
@@ -196,6 +174,25 @@ def plot_riders_data(df):
     plt.xlabel('Months')
     plt.ylabel('Riders Count')
     plt.show()
+
+def display_raw_data(df):
+    """ Display raw data from the dataframeself in Tabular Format using Pretty Table library.
+        Initially prints the 5 rows and asks from user if they want to proceed further
+    """
+    print('#'*60)
+    print('Displaying raw data from for the bikeshare.\n')
+    no_of_rows = df.shape[0]
+    for i in range(0, no_of_rows,5):
+        t = PrettyTable()
+        t.field_names = df.columns[1:7].insert(0,'Index')
+        tempdf = df.iloc[i:i+5,1:7]
+        for row in tempdf.itertuples():
+            t.add_row(row)
+        print(t)
+        print_more = input('\nWould you like to see more data? Please enter yes or no.\n')
+        if print_more.lower() != 'yes':
+            break
+
 def main():
     while True:
         city, month, day = get_filters()
@@ -213,6 +210,7 @@ def main():
                 is_plot = input('\nWould you like to plot riders data per month? Enter yes or no.\n')
                 if is_plot.lower() == 'yes':
                     plot_riders_data(df)
+            display_raw_data(df)
         restart = input('\nWould you like to restart? Enter yes or no.\n')
         if restart.lower() != 'yes':
             break
